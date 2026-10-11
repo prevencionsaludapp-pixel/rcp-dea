@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz RCP y DEA - Protocolo VASA</title>
+    <style>
+        :root {
+            --primary: #008b8b;       /* Cian oscuro / Dark Cyan */
+            --secondary: #005f73;     /* Cian profundo */
+            --accent: #0A9396;        /* Cian vibrante */
+            --light-cyan: #E0F2F1;    /* Cian claro para fondos */
+            --danger: #d90429;
+            --light: #f8f9fa;
+            --dark: #212529;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #e6f4f1; color: var(--dark); padding: 15px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: #fff; width: 100%; max-width: 600px; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,139,139,0.15); position: relative; overflow: hidden; border-top: 6px solid var(--primary); }
+        h1, h2, h3 { text-align: center; color: var(--primary); margin-bottom: 15px; font-size: 1.5rem; }
+        p { margin-bottom: 15px; line-height: 1.5; font-size: 0.95rem; }
+        
+        .hero-banner {
+            width: 100%;
+            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+            border-radius: 12px;
+            padding: 15px 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 10px rgba(0,139,139,0.05);
+        }
+        .hero-banner svg {
+            width: 100%;
+            max-width: 420px;
+            height: auto;
+        }
+
+        /* Estilo para el minipodio de la portada */
+        .preview-podium {
+            background: #f4fbfb;
+            border: 1px solid #b2dfdb;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+        .preview-podium h3 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: var(--secondary);
+        }
+        .preview-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 8px;
+            font-size: 0.85rem;
+            border-bottom: 1px dashed #d0e8e6;
+        }
+        .preview-item:last-child { border-bottom: none; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: var(--secondary); }
+        input, select { width: 100%; padding: 10px; border: 1px solid #b2dfdb; border-radius: 6px; font-size: 1rem; background: #fff; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 5px rgba(0,139,139,0.3); }
+        button { background: var(--primary); color: #fff; border: none; padding: 12px 20px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
+        button:hover { background: var(--secondary); }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        .legend-box { background: var(--light-cyan); border: 1px solid #b2dfdb; color: #004d40; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
+        .timer-bar-container { background: #e0e0e0; border-radius: 4px; height: 10px; width: 100%; margin-bottom: 20px; overflow: hidden; }
+        .timer-bar { background: var(--accent); height: 100%; width: 100%; transition: width 1s linear; }
+        .timer-text { text-align: right; font-weight: bold; font-size: 0.9rem; margin-bottom: 10px; color: var(--danger); }
+        .question-title { font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; color: var(--secondary); }
+        .option-btn { background: var(--light); color: var(--dark); border: 1px solid #b2dfdb; text-align: left; margin-bottom: 10px; font-size: 0.95rem; }
+        .option-btn:hover { background: var(--light-cyan); border-color: var(--primary); }
+        .podium-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        .podium-table th, .podium-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        .podium-table th { background: var(--primary); color: white; }
+        .p1 { background-color: #fff9c4 !important; font-weight: bold; } /* Oro */
+        .p2 { background-color: #f5f5f5 !important; font-weight: bold; } /* Plata */
+        .p3 { background-color: #ffe0b2 !important; font-weight: bold; } /* Bronce */
+        .loader { text-align: center; font-style: italic; color: #004d40; margin: 15px 0; }
+        
+        .feedback-container { text-align: center; padding: 20px; animation: fadeIn 0.3s ease-in-out; }
+        .feedback-icon { font-size: 4rem; margin-bottom: 15px; }
+        .feedback-title { font-size: 1.4rem; font-weight: bold; margin-bottom: 10px; }
+        .feedback-success { color: var(--primary); }
+        .feedback-error { color: var(--danger); }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- PANTALLA 1: REGISTRO Y RÉCORD DE MEJORES PUESTOS -->
+    <div id="screen-register" class="screen active">
+        <h1> RCP y DEA</h1>
+        
+        <div class="hero-banner">
+            <svg viewBox="0 0 500 130" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 10,65 L 70,65 L 80,40 L 95,95 L 110,20 L 125,75 L 135,65 L 490,65" fill="none" stroke="#008b8b" stroke-width="2.5" opacity="0.3" stroke-linecap="round"/>
+                
+                <g transform="translate(30, 25)">
+                    <circle cx="35" cy="35" r="30" fill="#008b8b" opacity="0.15"/>
+                    <circle cx="35" cy="35" r="25" fill="#008b8b"/>
+                    <path d="M27 22 C27 20 30 20 31 22 L33 26 C34 27 33 29 32 30 L31 31 C33 34 36 37 39 39 L40 38 C41 37 43 36 44 37 L48 39 C50 40 50 43 48 43 C43 48 30 42 22 34 C18 29 22 23 27 22 Z" fill="#ffffff"/>
+                    <text x="35" y="73" font-size="9" font-weight="bold" fill="#005f73" text-anchor="middle">1. Alerta</text>
+                </g>
+
+                <path d="M 105 60 L 125 60" stroke="#008b8b" stroke-width="3" stroke-dasharray="4,3"/>
+
+                <g transform="translate(135, 25)">
+                    <circle cx="35" cy="35" r="30" fill="#008b8b" opacity="0.15"/>
+                    <circle cx="35" cy="35" r="25" fill="#008b8b"/>
+                    <path d="M35 43 C35 43 23 35 23 27 C23 23 26 20 30 20 C33 20 35 22 35 22 C35 22 37 20 40 20 C44 20 47 23 47 27 C47 35 35 43 35 43 Z" fill="#ffffff"/>
+                    <path d="M28 26 L42 26" stroke="#008b8b" stroke-width="2.5" stroke-linecap="round"/>
+                    <text x="35" y="73" font-size="9" font-weight="bold" fill="#005f73" text-anchor="middle">2. RCP</text>
+                </g>
+
+                <path d="M 210 60 L 230 60" stroke="#008b8b" stroke-width="3" stroke-dasharray="4,3"/>
+
+                <g transform="translate(240, 25)">
+                    <circle cx="35" cy="35" r="30" fill="#008b8b" opacity="0.15"/>
+                    <circle cx="35" cy="35" r="25" fill="#0A9396"/>
+                    <path d="M37 17 L25 33 L34 33 L31 47 L45 29 L36 29 Z" fill="#ffffff"/>
+                    <text x="35" y="73" font-size="9" font-weight="bold" fill="#005f73" text-anchor="middle">3. DEA</text>
+                </g>
+
+                <path d="M 315 60 L 335 60" stroke="#008b8b" stroke-width="3" stroke-dasharray="4,3"/>
+
+                <g transform="translate(345, 25)">
+                    <circle cx="35" cy="35" r="30" fill="#008b8b" opacity="0.15"/>
+                    <circle cx="35" cy="35" r="25" fill="#008b8b"/>
+                    <path d="M31 22 H39 V31 H48 V39 H39 V48 H31 V39 H22 V31 H31 Z" fill="#ffffff"/>
+                    <text x="35" y="73" font-size="9" font-weight="bold" fill="#005f73" text-anchor="middle">4. Servicio Med.</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Récord / Top 3 en la Portada -->
+        <div class="preview-podium">
+            <h3>🏆 Récords del Podio (Top 3 Actual)</h3>
+            <div id="preview-top3">
+                <span style="font-size: 0.85rem; color: #666; font-style: italic;">Cargando récords...</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="nombre">Nombre y Apellido:</label>
+            <input type="text" id="nombre" placeholder="Ingrese su nombre completo" required>
+        </div>
+        <div class="form-group">
+            <label for="sector">Sector:</label>
+            <select id="sector">
+                <option value="" disabled selected>Seleccione su sector</option>
+                <option value="Administración Finanzas">Administración Finanzas</option>
+                <option value="Almacen General">Almacen General</option>
+                <option value="Compras">Compras</option>
+                <option value="Contralor">Contralor</option>
+                <option value="Control de Calidad">Control de Calidad</option>
+                <option value="Corte">Corte</option>
+                <option value="Descarga">Descarga</option>
+                <option value="Espejo">Espejo</option>
+                <option value="IT">IT</option>
+                <option value="Laboratorio">Laboratorio</option>
+                <option value="Laminado Estándar">Laminado Estándar</option>
+                <option value="Laminado Jumbo">Laminado Jumbo</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="MantenimientoHVF">MantenimientoHVF</option>
+                <option value="Mass Sertec Prime">Mass Sertec Prime</option>
+                <option value="PCP">PCP</option>
+                <option value="Procesados">Procesados</option>
+                <option value="Rrhh">RRHH</option>
+                <option value="Servicio Medico">Servicio Medico</option>
+                <option value="Sgi">SGI</option>
+                <option value="Ventas Exportación">Ventas Exportación</option>
+                <option value="Ventas Local">Ventas Local</option>
+                <option value="hvt">HVT</option>
+                <option value="hvf">HVF</option>
+                <option value="srf">SRF</option>
+                <option value="srt">SRT</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="instructor">Instructor:</label>
+            <select id="instructor">
+                <option value="" disabled selected>Seleccione su instructor</option>
+                <option value="Carina">Carina</option>
+                <option value="Gisele">Gisele</option>
+                <option value="Laura">Laura</option>
+                <option value="Paola">Paola</option>
+            </select>
+        </div>
+        <button onclick="irLeyenda()">Comenzar</button>
+    </div>
+
+    <!-- PANTALLA 2: LEYENDA VASA -->
+    <div id="screen-legend" class="screen">
+        <h2>Aviso Importante</h2>
+        <div class="legend-box">
+            Se evaluarán los conocimientos en el protocolo de <strong>VASA</strong> para <strong>RCP</strong> y <strong>MANEJO DE DEA</strong>.
+        </div>
+        <p>Dispondrás de un tiempo máximo de <strong>300 segundos (5 minutos)</strong> para responder las 10 preguntas. ¡Se registrará el tiempo empleado como criterio de desempate!</p>
+        <button onclick="iniciarQuiz()">¡Estoy listo, comenzar quiz!</button>
+    </div>
+
+    <!-- PANTALLA 3: QUIZ -->
+    <div id="screen-quiz" class="screen">
+        <div class="timer-text" id="timer-text">Tiempo restante: 05:00</div>
+        <div class="timer-bar-container">
+            <div class="timer-bar" id="timer-bar"></div>
+        </div>
+        <div id="question-container">
+            <div class="question-title" id="q-title">Pregunta...</div>
+            <div id="options-container"></div>
+        </div>
+        <div id="feedback-screen" style="display: none;"></div>
+    </div>
+
+    <!-- PANTALLA 4: RESULTADOS Y PODIO HISTÓRICO -->
+    <div id="screen-podium" class="screen">
+        <h2>¡Quiz Finalizado!</h2>
+        <p id="resultado-final" style="text-align: center; font-size: 1.1rem; font-weight: bold; color: var(--secondary);"></p>
+        <div class="loader" id="loader-msg">Guardando resultado y actualizando podio histórico en vivo...</div>
+        
+        <h3>Podio Histórico de Jugadores</h3>
+        <div style="max-height: 280px; overflow-y: auto;">
+            <table class="podium-table">
+                <thead>
+                    <tr>
+                        <th>Puesto</th>
+                        <th>Nombre</th>
+                        <th>Sector</th>
+                        <th>Puntaje</th>
+                        <th>Tiempo</th>
+                    </tr>
+                </thead>
+                <tbody id="podium-body">
+                    <!-- Contenido dinámico -->
+                </tbody>
+            </table>
+        </div>
+        <button onclick="location.reload()">Jugar Nuevamente</button>
+    </div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyvYqmROLMaMKTe21RvrH1Ir9pdqWVdq_BkPsk7x-viEAB_JvlJe9S1ct41QugBODUy/exec";
+
+    const preguntas = [
+        {
+            pregunta: "1. Según el protocolo VASA, ¿qué es lo primero que se debe hacer ante un evento de parada cardíaca?",
+            opciones: ["Evaluar la escena", "Evaluar el estado de conciencia", "Llamar a servicio médico"],
+            correcta: 0
+        },
+        {
+            pregunta: "2. ¿Qué debemos tener en cuenta para confirmar una parada cardíaca y activar el protocolo ALERTA DEA?",
+            opciones: ["El dolor torácico persistente", "Las 2 R negativas (No responde, No respira)", "Que no esté consciente"],
+            correcta: 1
+        },
+        {
+            pregunta: "3. ¿Cuánto tiempo debemos observar el tórax para confirmar que está en parada cardiorrespiratoria?",
+            opciones: ["Entre 5 a 10 segundos", "Hasta 3 segundos", "Más de 10 segundos"],
+            correcta: 0
+        },
+        {
+            pregunta: "4. ¿Cuál es la palabra clave que debemos mencionar al llamar a emergencia para activar el protocolo?",
+            opciones: ["Código rojo", "Alerta DEA", "Parada cardíaca"],
+            correcta: 1
+        },
+        {
+            pregunta: "5. ¿Cuántas compresiones deben darse por minuto?",
+            opciones: ["De 30 a 60", "De 60 a 90", "De 100 a 120"],
+            correcta: 2
+        },
+        {
+            pregunta: "6. ¿Cuánto debe comprimirse el pecho?",
+            opciones: ["3 cm", "6 cm", "10 cm"],
+            correcta: 1
+        },
+        {
+            pregunta: "7. ¿Cuál es el número al que debo llamar a servicio médico?",
+            opciones: ["107", "5142", "11"],
+            correcta: 2
+        },
+        {
+            pregunta: "8. Cuando me traen el DEA, ¿qué es lo primero que debo hacer?",
+            opciones: ["Encenderlo", "Esperar a servicio médico", "Colocar los parches"],
+            correcta: 0
+        },
+        {
+            pregunta: "9. ¿Quiénes pueden manipular los desfibriladores?",
+            opciones: ["Servicio médico", "Brigadistas", "Cualquier persona"],
+            correcta: 2
+        },
+        {
+            pregunta: "10. Si me encuentro solo ante una víctima de parada cardíaca, lo primero que debo hacer es:",
+            opciones: ["Iniciar RCP inmediatamente", "Solicitar ayuda", "Buscar el DEA"],
+            correcta: 1
+        }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let userData = {};
+    let timeLeft = 300;
+    let timeSpent = 0;
+    let timerInterval;
+
+    // Al cargar la página, consultamos Google Sheets para mostrar los récords en la portada
+    window.onload = function() {
+        cargarRécordsPortada();
+    };
+
+    function cargarRécordsPortada() {
+        fetch(WEB_APP_URL)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    data.sort((a, b) => {
+                        if (b.puntaje !== a.puntaje) return b.puntaje - a.puntaje;
+                        return a.tiempo - b.tiempo;
+                    });
+
+                    let top3Html = '';
+                    let top3 = data.slice(0, 3);
+                    top3.forEach((p, idx) => {
+                        let medalla = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
+                        let tMins = Math.floor(p.tiempo / 60);
+                        let tSecs = p.tiempo % 60;
+                        let tFmt = tMins > 0 ? `${tMins}m ${tSecs}s` : `${tSecs}s`;
+                        
+                        top3Html += `
+                            <div class="preview-item">
+                                <span>${medalla} <strong>${p.nombre}</strong> (${p.sector})</span>
+                                <span><strong>${p.puntaje} pts</strong> (${tFmt})</span>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('preview-top3').innerHTML = top3Html;
+                } else {
+                    document.getElementById('preview-top3').innerHTML = `<span style="font-size: 0.85rem; color: #666; font-style: italic;">¡Sé el primero en registrar un récord!</span>`;
+                }
+            })
+            .catch(() => {
+                document.getElementById('preview-top3').innerHTML = `<span style="font-size: 0.85rem; color: #666; font-style: italic;">Sin conexión con los récords.</span>`;
+            });
+    }
+
+    function cambiarPantalla(idPantalla) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(idPantalla).classList.add('active');
+    }
+
+    function irLeyenda() {
+        const nombre = document.getElementById('nombre').value.trim();
+        const sector = document.getElementById('sector').value;
+        const instructor = document.getElementById('instructor').value;
+
+        if (!nombre || !sector || !instructor) {
+            alert('Por favor, complete todos los campos (Nombre, Sector e Instructor).');
+            return;
+        }
+
+        userData = { nombre, sector, instructor };
+        cambiarPantalla('screen-legend');
+    }
+
+    function iniciarQuiz() {
+        cambiarPantalla('screen-quiz');
+        iniciarTemporizador();
+        mostrarPregunta();
+    }
+
+    function iniciarTemporizador() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timeSpent++;
+            
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            document.getElementById('timer-text').innerText = `Tiempo restante: ${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            let porcentaje = (timeLeft / 300) * 100;
+            document.getElementById('timer-bar').style.width = porcentaje + '%';
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                finalizarQuiz();
+            }
+        }, 1000);
+    }
+
+    function mostrarPregunta() {
+        document.getElementById('feedback-screen').style.display = 'none';
+        document.getElementById('question-container').style.display = 'block';
+
+        if (currentQuestion >= preguntas.length) {
+            finalizarQuiz();
+            return;
+        }
+        let q = preguntas[currentQuestion];
+        document.getElementById('q-title').innerText = q.pregunta;
+        let opcionesHTML = '';
+        q.opciones.forEach((opcion, index) => {
+            opcionesHTML += `<button class="option-btn" onclick="responder(${index})">${opcion}</button>`;
+        });
+        document.getElementById('options-container').innerHTML = opcionesHTML;
+    }
+
+    function responder(opcionSeleccionada) {
+        let q = preguntas[currentQuestion];
+        let esCorrecta = (opcionSeleccionada === q.correcta);
+
+        if (esCorrecta) {
+            score += 10;
+        }
+
+        document.getElementById('question-container').style.display = 'none';
+        let feedbackDiv = document.getElementById('feedback-screen');
+        
+        if (esCorrecta) {
+            feedbackDiv.innerHTML = `
+                <div class="feedback-container">
+                    <div class="feedback-icon">🎉</div>
+                    <div class="feedback-title feedback-success">¡Excelente! ¡Respuesta Correcta!</div>
+                    <p>+10 puntos</p>
+                </div>
+            `;
+        } else {
+            feedbackDiv.innerHTML = `
+                <div class="feedback-container">
+                    <div class="feedback-icon">❌</div>
+                    <div class="feedback-title feedback-error">¡Incorrecto!</div>
+                    <p>La respuesta correcta era: <strong>${q.opciones[q.correcta]}</strong></p>
+                </div>
+            `;
+        }
+        
+        feedbackDiv.style.display = 'block';
+
+        setTimeout(() => {
+            currentQuestion++;
+            mostrarPregunta();
+        }, 2200);
+    }
+
+    function finalizarQuiz() {
+        clearInterval(timerInterval);
+        cambiarPantalla('screen-podium');
+        
+        let minutosDemorados = Math.floor(timeSpent / 60);
+        let segundosDemorados = timeSpent % 60;
+        let tiempoTexto = minutosDemorados > 0 ? `${minutosDemorados}m ${segundosDemorados}s` : `${segundosDemorados}s`;
+
+        document.getElementById('resultado-final').innerText = `${userData.nombre}, obtuviste ${score} de 100 puntos en ${tiempoTexto}.`;
+
+        enviarYObtenerPodio();
+    }
+
+    function enviarYObtenerPodio() {
+        const datosEnvio = {
+            nombre: userData.nombre,
+            sector: userData.sector,
+            instructor: userData.instructor,
+            puntaje: score,
+            tiempo: timeSpent,
+            fecha: new Date().toLocaleString()
+        };
+
+        fetch(WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosEnvio)
+        }).then(() => {
+            setTimeout(obtenerPodioGlobal, 1500);
+        }).catch(err => {
+            document.getElementById('loader-msg').innerText = "Error al conectar con la hoja de cálculo.";
+            console.error(err);
+        });
+    }
+
+    function obtenerPodioGlobal() {
+        fetch(WEB_APP_URL)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loader-msg').style.display = 'none';
+                renderizarPodio(data);
+            })
+            .catch(err => {
+                document.getElementById('loader-msg').innerText = "No se pudo cargar el podio en vivo.";
+            });
+    }
+
+    function renderizarPodio(participantes) {
+        if (!Array.isArray(participantes) || participantes.length === 0) {
+            document.getElementById('podium-body').innerHTML = `<tr><td colspan="5" style="text-align:center;">No hay registros aún.</td></tr>`;
+            return;
+        }
+
+        participantes.sort((a, b) => {
+            if (b.puntaje !== a.puntaje) {
+                return b.puntaje - a.puntaje;
+            }
+            return a.tiempo - b.tiempo;
+        });
+
+        let html = '';
+        participantes.forEach((p, index) => {
+            let clasePuesto = '';
+            let medalla = '';
+            if (index === 0) { clasePuesto = 'p1'; medalla = '🥇 '; }
+            else if (index === 1) { clasePuesto = 'p2'; medalla = '🥈 '; }
+            else if (index === 2) { clasePuesto = 'p3'; medalla = '🥉 '; }
+
+            let tMins = Math.floor(p.tiempo / 60);
+            let tSecs = p.tiempo % 60;
+            let tFormateado = tMins > 0 ? `${tMins}m ${tSecs}s` : `${tSecs}s`;
+
+            html += `<tr class="${clasePuesto}">
+                <td>${medalla}${index + 1}°</td>
+                <td>${p.nombre}</td>
+                <td>${p.sector}</td>
+                <td>${p.puntaje} pts</td>
+                <td>${tFormateado}</td>
+            </tr>`;
+        });
+        document.getElementById('podium-body').innerHTML = html;
+    }
+</script>
+</body>
+</html>
