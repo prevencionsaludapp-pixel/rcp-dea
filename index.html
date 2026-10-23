@@ -15,7 +15,7 @@
             --dark: #212529;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #e6f4f1; color: var(--dark); padding: 15px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        body { background: #e6f4f1; color: var(--dark); padding: 15px; display: flex; justify-content: center; align-items: center; min-height: 100vh; position: relative; }
         .container { background: #fff; width: 100%; max-width: 600px; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,139,139,0.15); position: relative; overflow: hidden; border-top: 6px solid var(--primary); }
         h1, h2, h3 { text-align: center; color: var(--primary); margin-bottom: 15px; font-size: 1.5rem; }
         p { margin-bottom: 15px; line-height: 1.5; font-size: 0.95rem; }
@@ -65,6 +65,8 @@
         input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 5px rgba(0,139,139,0.3); }
         button { background: var(--primary); color: #fff; border: none; padding: 12px 20px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
         button:hover { background: var(--secondary); }
+        button:disabled { background: #b0bec5; cursor: not-allowed; }
+        
         .screen { display: none; }
         .screen.active { display: block; }
         .legend-box { background: var(--light-cyan); border: 1px solid #b2dfdb; color: #004d40; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
@@ -74,6 +76,7 @@
         .question-title { font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; color: var(--secondary); }
         .option-btn { background: var(--light); color: var(--dark); border: 1px solid #b2dfdb; text-align: left; margin-bottom: 10px; font-size: 0.95rem; }
         .option-btn:hover { background: var(--light-cyan); border-color: var(--primary); }
+        
         .podium-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
         .podium-table th, .podium-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e0e0e0; }
         .podium-table th { background: var(--primary); color: white; }
@@ -88,6 +91,86 @@
         .feedback-success { color: var(--primary); }
         .feedback-error { color: var(--danger); }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* Mensaje de intento bloqueado */
+        .blocked-notice {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        /* Botón sutil debajo del podio */
+        .btn-subtle {
+            background: transparent;
+            color: var(--secondary);
+            border: 1px dashed var(--accent);
+            padding: 8px 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 20px;
+            margin-top: 15px;
+            width: auto;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        .btn-subtle:hover {
+            background: var(--light-cyan);
+            color: var(--primary);
+            border-style: solid;
+        }
+
+        /* Modal para la lista completa de participantes */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-header h3 { margin: 0; }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #888;
+            cursor: pointer;
+            width: auto;
+            padding: 0;
+            margin: 0;
+        }
+        .modal-body {
+            overflow-y: auto;
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -95,7 +178,7 @@
 <div class="container">
     <!-- PANTALLA 1: REGISTRO Y RÉCORD DE MEJORES PUESTOS -->
     <div id="screen-register" class="screen active">
-        <h1> RCP y DEA</h1>
+        <h1>RCP y DEA</h1>
         
         <div class="hero-banner">
             <svg viewBox="0 0 500 130" xmlns="http://www.w3.org/2000/svg">
@@ -144,7 +227,12 @@
             <div id="preview-top3">
                 <span style="font-size: 0.85rem; color: #666; font-style: italic;">Cargando récords...</span>
             </div>
+            <div style="text-align: center;">
+                <button class="btn-subtle" onclick="abrirModalParticipantes()">🔍 Ver todos los concursantes</button>
+            </div>
         </div>
+
+        <div id="blocked-msg-container"></div>
 
         <div class="form-group">
             <label for="nombre">Nombre y Apellido:</label>
@@ -192,7 +280,7 @@
                 <option value="Paola">Paola</option>
             </select>
         </div>
-        <button onclick="irLeyenda()">Comenzar</button>
+        <button id="btn-comenzar" onclick="irLeyenda()">Comenzar</button>
     </div>
 
     <!-- PANTALLA 2: LEYENDA VASA -->
@@ -241,7 +329,40 @@
                 </tbody>
             </table>
         </div>
-        <button onclick="location.reload()">Jugar Nuevamente</button>
+
+        <div style="text-align: center;">
+            <button class="btn-subtle" onclick="abrirModalParticipantes()">🔍 Ver lista completa de participantes</button>
+        </div>
+
+        <p style="text-align: center; margin-top: 15px; color: #666; font-style: italic; font-size: 0.85rem;">
+            Solo se permite un intento por usuario.
+        </p>
+    </div>
+</div>
+
+<!-- MODAL DE TODOS LOS PARTICIPANTES -->
+<div class="modal" id="modal-participantes">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>👥 Todos los Concursantes</h3>
+            <button class="close-btn" onclick="cerrarModalParticipantes()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <table class="podium-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Sector</th>
+                        <th>Puntaje</th>
+                        <th>Tiempo</th>
+                    </tr>
+                </thead>
+                <tbody id="all-participants-body">
+                    <tr><td colspan="5" style="text-align:center;">Cargando lista...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -307,38 +428,34 @@
     let timeLeft = 300;
     let timeSpent = 0;
     let timerInterval;
+    let globalParticipantes = [];
 
-    // Al cargar la página, consultamos Google Sheets para mostrar los récords en la portada
     window.onload = function() {
-        cargarRécordsPortada();
+        verificarIntentoPrevio();
+        cargarDatosGlobales();
     };
 
-    function cargarRécordsPortada() {
+    function verificarIntentoPrevio() {
+        if (localStorage.getItem('quiz_completado') === 'true') {
+            document.getElementById('blocked-msg-container').innerHTML = `
+                <div class="blocked-notice">
+                    ⚠️ Ya has participado en este Quiz. No está permitido volver a jugar.
+                </div>
+            `;
+            document.getElementById('nombre').disabled = true;
+            document.getElementById('sector').disabled = true;
+            document.getElementById('instructor').disabled = true;
+            document.getElementById('btn-comenzar').disabled = true;
+        }
+    }
+
+    function cargarDatosGlobales() {
         fetch(WEB_APP_URL)
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data) && data.length > 0) {
-                    data.sort((a, b) => {
-                        if (b.puntaje !== a.puntaje) return b.puntaje - a.puntaje;
-                        return a.tiempo - b.tiempo;
-                    });
-
-                    let top3Html = '';
-                    let top3 = data.slice(0, 3);
-                    top3.forEach((p, idx) => {
-                        let medalla = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
-                        let tMins = Math.floor(p.tiempo / 60);
-                        let tSecs = p.tiempo % 60;
-                        let tFmt = tMins > 0 ? `${tMins}m ${tSecs}s` : `${tSecs}s`;
-                        
-                        top3Html += `
-                            <div class="preview-item">
-                                <span>${medalla} <strong>${p.nombre}</strong> (${p.sector})</span>
-                                <span><strong>${p.puntaje} pts</strong> (${tFmt})</span>
-                            </div>
-                        `;
-                    });
-                    document.getElementById('preview-top3').innerHTML = top3Html;
+                if (Array.isArray(data)) {
+                    globalParticipantes = data;
+                    renderizarTop3(globalParticipantes);
                 } else {
                     document.getElementById('preview-top3').innerHTML = `<span style="font-size: 0.85rem; color: #666; font-style: italic;">¡Sé el primero en registrar un récord!</span>`;
                 }
@@ -348,18 +465,60 @@
             });
     }
 
+    function ordenarParticipantes(lista) {
+        return lista.sort((a, b) => {
+            if (b.puntaje !== a.puntaje) return b.puntaje - a.puntaje;
+            return a.tiempo - b.tiempo;
+        });
+    }
+
+    function renderizarTop3(data) {
+        if (data.length > 0) {
+            let ordenados = ordenarParticipantes([...data]);
+            let top3Html = '';
+            let top3 = ordenados.slice(0, 3);
+            top3.forEach((p, idx) => {
+                let medalla = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
+                let tMins = Math.floor(p.tiempo / 60);
+                let tSecs = p.tiempo % 60;
+                let tFmt = tMins > 0 ? `${tMins}m ${tSecs}s` : `${tSecs}s`;
+                
+                top3Html += `
+                    <div class="preview-item">
+                        <span>${medalla} <strong>${p.nombre}</strong> (${p.sector})</span>
+                        <span><strong>${p.puntaje} pts</strong> (${tFmt})</span>
+                    </div>
+                `;
+            });
+            document.getElementById('preview-top3').innerHTML = top3Html;
+        } else {
+            document.getElementById('preview-top3').innerHTML = `<span style="font-size: 0.85rem; color: #666; font-style: italic;">¡Sé el primero en registrar un récord!</span>`;
+        }
+    }
+
     function cambiarPantalla(idPantalla) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(idPantalla).classList.add('active');
     }
 
     function irLeyenda() {
+        if (localStorage.getItem('quiz_completado') === 'true') {
+            alert('Ya has participado en este quiz y no puedes volver a intentar.');
+            return;
+        }
+
         const nombre = document.getElementById('nombre').value.trim();
         const sector = document.getElementById('sector').value;
         const instructor = document.getElementById('instructor').value;
 
         if (!nombre || !sector || !instructor) {
             alert('Por favor, complete todos los campos (Nombre, Sector e Instructor).');
+            return;
+        }
+
+        const nombreExistente = globalParticipantes.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+        if (nombreExistente) {
+            alert('Este nombre y apellido ya ha completado el quiz anteriormente.');
             return;
         }
 
@@ -447,6 +606,9 @@
 
     function finalizarQuiz() {
         clearInterval(timerInterval);
+        
+        localStorage.setItem('quiz_completado', 'true');
+
         cambiarPantalla('screen-podium');
         
         let minutosDemorados = Math.floor(timeSpent / 60);
@@ -486,7 +648,10 @@
             .then(res => res.json())
             .then(data => {
                 document.getElementById('loader-msg').style.display = 'none';
-                renderizarPodio(data);
+                if (Array.isArray(data)) {
+                    globalParticipantes = data;
+                    renderizarPodio(globalParticipantes);
+                }
             })
             .catch(err => {
                 document.getElementById('loader-msg').innerText = "No se pudo cargar el podio en vivo.";
@@ -499,15 +664,10 @@
             return;
         }
 
-        participantes.sort((a, b) => {
-            if (b.puntaje !== a.puntaje) {
-                return b.puntaje - a.puntaje;
-            }
-            return a.tiempo - b.tiempo;
-        });
+        let ordenados = ordenarParticipantes([...participantes]);
 
         let html = '';
-        participantes.forEach((p, index) => {
+        ordenados.forEach((p, index) => {
             let clasePuesto = '';
             let medalla = '';
             if (index === 0) { clasePuesto = 'p1'; medalla = '🥇 '; }
@@ -527,6 +687,38 @@
             </tr>`;
         });
         document.getElementById('podium-body').innerHTML = html;
+    }
+
+    /* Modal de Participantes */
+    function abrirModalParticipantes() {
+        document.getElementById('modal-participantes').classList.add('active');
+        
+        let bodyTable = document.getElementById('all-participants-body');
+        if (globalParticipantes.length === 0) {
+            bodyTable.innerHTML = `<tr><td colspan="5" style="text-align:center;">No hay registros o aún están cargando...</td></tr>`;
+            return;
+        }
+
+        let ordenados = ordenarParticipantes([...globalParticipantes]);
+        let html = '';
+        ordenados.forEach((p, index) => {
+            let tMins = Math.floor(p.tiempo / 60);
+            let tSecs = p.tiempo % 60;
+            let tFormateado = tMins > 0 ? `${tMins}m ${tSecs}s` : `${tSecs}s`;
+
+            html += `<tr>
+                <td>${index + 1}</td>
+                <td>${p.nombre}</td>
+                <td>${p.sector}</td>
+                <td>${p.puntaje} pts</td>
+                <td>${tFormateado}</td>
+            </tr>`;
+        });
+        bodyTable.innerHTML = html;
+    }
+
+    function cerrarModalParticipantes() {
+        document.getElementById('modal-participantes').classList.remove('active');
     }
 </script>
 </body>
